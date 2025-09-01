@@ -57,6 +57,8 @@ const RideBooking = () => {
   const [estimatedFare, setEstimatedFare] = useState(null);
   const [rideStatus, setRideStatus] = useState(null);
   const [currentRide, setCurrentRide] = useState(null);
+  const [availableDrivers, setAvailableDrivers] = useState([]);
+  const [selectedDriver, setSelectedDriver] = useState(null);
 
   // Hooks
   const { location: currentLocation, loading: locationLoading, error: locationError } = useGeolocation();
@@ -506,6 +508,92 @@ const ActiveRideView = ({ ride, status, onCancel }) => {
         </div>
       </div>
     </div>
+  );
+};
+// Driver Selection Component
+const DriverSelection = ({ availableDrivers, onSelectDriver, selectedDriver }) => {
+  if (!availableDrivers || availableDrivers.length === 0) {
+    return (
+      <Card>
+        <div className="text-center py-8">
+          <UserIcon className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-600" />
+          <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
+            No drivers available
+          </h3>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Please try again in a few minutes
+          </p>
+        </div>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        Choose Your Driver
+      </h3>
+      <div className="space-y-3">
+        {availableDrivers.map((driver) => (
+          <motion.div
+            key={driver.id}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className={`relative p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
+              selectedDriver?.id === driver.id
+                ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600'
+            }`}
+            onClick={() => onSelectDriver(driver)}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                  <span className="text-white font-medium text-lg">
+                    {driver.name.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <div>
+                  <h4 className="font-medium text-gray-900 dark:text-white">
+                    {driver.name}
+                  </h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                    {driver.vehicle_type} • {driver.vehicle_number}
+                  </p>
+                  <div className="flex items-center space-x-4 mt-1">
+                    <div className="flex items-center space-x-1">
+                      <StarIcon className="w-4 h-4 text-yellow-400 fill-current" />
+                      <span className="text-sm text-gray-600 dark:text-gray-300">
+                        {driver.rating || '4.9'}
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-1 text-xs text-gray-500">
+                      <MapPinIcon className="w-3 h-3" />
+                      <span>{driver.distance}km away</span>
+                    </div>
+                    <div className="flex items-center space-x-1 text-xs text-gray-500">
+                      <ClockIcon className="w-3 h-3" />
+                      <span>{driver.eta} mins</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="text-right">
+                {selectedDriver?.id === driver.id && (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="text-primary-600"
+                  >
+                    <CheckCircleIcon className="w-6 h-6" />
+                  </motion.div>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    </Card>
   );
 };
 

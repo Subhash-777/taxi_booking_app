@@ -13,6 +13,9 @@ import Layout from './components/Layout/Layout';
 const RideBooking = React.lazy(() => import('./components/RideBooking/RideBooking'));
 const Login = React.lazy(() => import('./components/Auth/Login'));
 const Register = React.lazy(() => import('./components/Auth/Register'));
+const Dashboard = React.lazy(() => import('./components/Dashboard/Dashboard')); // Single dashboard
+const Profile = React.lazy(() => import('./components/Profile/Profile'));
+const RideHistory = React.lazy(() => import('./components/RideHistory/RideHistory'));
 
 // Context
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -80,6 +83,7 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
       <Routes>
+        {/* Public routes */}
         <Route
           path="/login"
           element={
@@ -101,21 +105,43 @@ function AppContent() {
           }
         />
 
+        {/* Protected routes */}
         <Route
           path="/*"
           element={
             <ProtectedRoute>
               <Layout>
                 <Routes>
+                  <Route path="/" element={<Navigate to="/dashboard" replace />} />
                   <Route
-                    path="/"
-                    element={<Navigate to="/book-ride" replace />}
+                    path="/dashboard"
+                    element={
+                      <Suspense fallback={<LoadingSpinner />}>
+                        <Dashboard />
+                      </Suspense>
+                    }
                   />
                   <Route
                     path="/book-ride"
                     element={
                       <Suspense fallback={<LoadingSpinner />}>
                         <RideBooking />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="/history"
+                    element={
+                      <Suspense fallback={<LoadingSpinner />}>
+                        <RideHistory />
+                      </Suspense>
+                    }
+                  />
+                  <Route
+                    path="/profile"
+                    element={
+                      <Suspense fallback={<LoadingSpinner />}>
+                        <Profile />
                       </Suspense>
                     }
                   />

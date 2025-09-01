@@ -1,24 +1,41 @@
-export const calculateFare = (distance, duration, pricing, surgeMultiplier = 1) => {
-    const baseFare = pricing.base_fare;
-    const distanceFare = distance * pricing.per_km_rate;
-    const timeFare = duration * pricing.per_minute_rate;
+// Pricing calculation utilities
+export const calculateFare = (distance, duration, pricingInfo, surgeMultiplier = 1) => {
+    if (!pricingInfo) {
+        // Fallback pricing
+        const baseFare = 50;
+        const perKmRate = 12;
+        const perMinuteRate = 2;
+        
+        const fare = baseFare + (distance * perKmRate) + (duration * perMinuteRate);
+        return Math.round(fare * surgeMultiplier);
+    }
     
-    return ((baseFare + distanceFare + timeFare) * surgeMultiplier).toFixed(2);
+    const { base_fare, per_km_rate, per_minute_rate } = pricingInfo;
+    const fare = base_fare + (distance * per_km_rate) + (duration * per_minute_rate);
+    
+    return Math.round(fare * surgeMultiplier);
 };
 
 export const getSurgeMultiplier = () => {
-    // Simple surge pricing logic based on time
+    // Simple surge pricing logic
     const hour = new Date().getHours();
     
-    // Peak hours: 7-10 AM and 5-9 PM
-    if ((hour >= 7 && hour <= 10) || (hour >= 17 && hour <= 21)) {
+    // Peak hours: 7-10 AM and 5-8 PM
+    if ((hour >= 7 && hour <= 10) || (hour >= 17 && hour <= 20)) {
         return 1.5;
     }
     
-    // Late night: 11 PM - 5 AM
-    if (hour >= 23 || hour <= 5) {
-        return 1.8;
+    // Night hours: 10 PM - 6 AM
+    if (hour >= 22 || hour <= 6) {
+        return 1.2;
     }
     
-    return 1.0; // Normal pricing
+    // Regular hours
+    return 1.0;
+};
+
+export const getEstimatedTime = (distance) => {
+    // Estimate time based on distance (assuming city traffic)
+    // Average speed: 25 km/h in city traffic
+    return Math.ceil((distance / 25) * 60); // in minutes
 };

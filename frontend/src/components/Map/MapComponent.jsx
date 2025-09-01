@@ -1,106 +1,121 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Loader } from '@googlemaps/js-api-loader';
-import './MapComponent.css';
 
-const MapComponent = ({ onLocationSelect, pickupLocation, dropoffLocation }) => {
-    const mapRef = useRef(null);
-    const [map, setMap] = useState(null);
-    const [pickupMarker, setPickupMarker] = useState(null);
-    const [dropoffMarker, setDropoffMarker] = useState(null);
+const MapComponent = ({
+  pickupLocation,
+  dropoffLocation,
+  onLocationSelect,
+  currentStep
+}) => {
+  const mapRef = useRef(null);
+  const mapInstance = useRef(null);
+  const pickupMarker = useRef(null);
+  const dropoffMarker = useRef(null);
 
-    useEffect(() => {
-        const loader = new Loader({
-            apiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
-            version: 'weekly',
-            libraries: ['places']
+  useEffect(() => {
+    const initMap = async () => {
+      const loader = new Loader({
+        apiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
+        version: 'weekly',
+        libraries: ['places']
+      });
+
+      try {
+        await loader.load();
+        
+        const map = new window.google.maps.Map(mapRef.current, {
+          center: { lat: 28.6139, lng: 77.2090 }, // Default to Delhi
+          zoom: 13,
+          styles: [
+            // You can add custom map styles here
+          ]
         });
 
-        loader.load().then(() => {
-            const mapInstance = new google.maps.Map(mapRef.current, {
-                center: { lat: 28.6139, lng: 77.2090 }, // Delhi coordinates
-                zoom: 12,
-                styles: [
-                    {
-                        featureType: 'poi',
-                        elementType: 'labels',
-                        stylers: [{ visibility: 'off' }]
-                    }
-                ]
-            });
+        mapInstance.current = map;
 
-            setMap(mapInstance);
-
-            // Click listener for location selection
-            mapInstance.addListener('click', (event) => {
-                const lat = event.latLng.lat();
-                const lng = event.latLng.lng();
-                
-                if (onLocationSelect) {
-                    onLocationSelect({ lat, lng });
-                }
-            });
+        // Add click listener for location selection
+        map.addListener('click', (event) => {
+          const location = {
+            lat: event.latLng.lat(),
+            lng: event.latLng.lng(),
+            address: `${event.latLng.lat()}, ${event.latLng.lng()}`
+          };
+          onLocationSelect(location, currentStep === 1 ? 'pickup' : 'dropoff');
         });
-    }, []);
 
-    // Update markers when locations change
-    useEffect(() => {
-        if (!map) return;
+      } catch (error) {
+        console.error('Error loading Google Maps:', error);
+      }
+    };
 
-        // Clear existing markers
-        if (pickupMarker) pickupMarker.setMap(null);
-        if (dropoffMarker) dropoffMarker.setMap(null);
+    initMap();
+  }, []);
 
-        // Add pickup marker
+  // Update markers when locations change
+  useEffect(() => {
+    if (mapInstance.current && window.google) {
+      // Add/update pickup marker
+      if (pickupLocation) {
+        if (pickupMarker.current) {
+          pickupMarker.current.setMap(null);
+        }
+        pickupMarker.current = new window.google.maps.Marker({
+          position: { lat: pickupLocation.lat, lng: pickupLocation.lng },
+          map: mapInstance.current,
+          title: 'Pickup Location',
+          icon: {
+            path: window.google.maps.SymbolPath.CIRCLE,
+            scale: 10,
+            fillColor: '#22c55e',
+            fillOpacity: 1,
+            strokeColor: '#ffffff',
+            strokeWeight: 2
+          }
+        });
+      }
+
+      // Add/update dropoff marker
+      if (dropoffLocation) {
+        if (dropoffMarker.current) {
+          dropoffMarker.current.setMap(null);
+        }
+        dropoffMarker.current = new window.google.maps.Marker({
+          position: { lat: dropoffLocation.lat, lng: dropoffLocation.lng },
+          map: mapInstance.current,
+          title: 'Dropoff Location',
+          icon: {
+            path: window.google.maps.SymbolPath.CIRCLE,
+            scale: 10,
+            fillColor: '#ef4444',
+            fillOpacity: 1,
+            strokeColor: '#ffffff',
+            strokeWeight: 2
+          }
+        });
+
+        // If both locations exist, fit bounds to show both
         if (pickupLocation) {
-            const marker = new google.maps.Marker({
-                position: pickupLocation,
-                map: map,
-                title: 'Pickup Location',
-                icon: {
-                    url: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png'
-                }
-            });
-            setPickupMarker(marker);
+          const bounds = new window.google.maps.LatLngBounds();
+          bounds.extend({ lat: pickupLocation.lat, lng: pickupLocation.lng });
+          bounds.extend({ lat: dropoffLocation.lat, lng: dropoffLocation.lng });
+          mapInstance.current.fitBounds(bounds);
         }
+      }
+    }
+  }, [pickupLocation, dropoffLocation]);
 
-        // Add dropoff marker
-        if (dropoffLocation) {
-            const marker = new google.maps.Marker({
-                position: dropoffLocation,
-                map: map,
-                title: 'Dropoff Location',
-                icon: {
-                    url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png'
-                }
-            });
-            setDropoffMarker(marker);
-
-            // Draw route if both locations exist
-            if (pickupLocation) {
-                const directionsService = new google.maps.DirectionsService();
-                const directionsRenderer = new google.maps.DirectionsRenderer({
-                    suppressMarkers: true
-                });
-                directionsRenderer.setMap(map);
-
-                directionsService.route({
-                    origin: pickupLocation,
-                    destination: dropoffLocation,
-                    travelMode: google.maps.TravelMode.DRIVING,
-                }, (result, status) => {
-                    if (status === 'OK') {
-                        directionsRenderer.setDirections(result);
-                    }
-                });
-            }
-        }
-    }, [map, pickupLocation, dropoffLocation]);
-
-    return (
-        <div className="map-container">
-            <div ref={mapRef} className="map" />
+  return (
+    <div className="w-full h-full rounded-lg overflow-hidden">
+      <div ref={mapRef} className="w-full h-full" />
+      {!import.meta.env.VITE_GOOGLE_MAPS_API_KEY && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
+          <p className="text-gray-500 dark:text-gray-400">
+            Google Maps API key not configured
+          </p>
         </div>
-    );
+      )}
+    </div>
+  );
 };
 
 export default MapComponent;
